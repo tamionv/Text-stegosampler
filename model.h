@@ -5,47 +5,60 @@
 #include <map>
 using namespace std;
 
-
 // Each symbol will be represented by an integer code.
-using symbol = int;
+using symbol = unsigned;
 
 // A priori I fix that _|_ is represented by 0.
-constexpr int bottom_symbol = 0;
+constexpr unsigned bottom_symbol = 0;
 
 // Each possible context will be represented by an integer code.
-using context = int;
+using context = unsigned;
 
 // Likewise, I fix that the context containing only _|_ is represented by 0.
-constexpr int bottom_context = 0;
+constexpr unsigned bottom_context = 0;
 
 class model {
+    unsigned clen;
     map<string, symbol> symbol_to_code;
     vector<string> code_to_symbol;
 
     map<vector<symbol>, context> sequence_to_context;
-    vector<vector<symbol>> context_to_sequence;
+    vector<map<symbol, pair<double, context>>> following_symbols;
+    vector<double> total_count;
 
-    // Tokenises a text, adding in symbol meanings to model.
+    // Tokenises a string, splitting it into words and punctuation,
+    // and adding in symbol meanings to model.
     vector<symbol> tokenise(string);
 public:
+    // Empty model constructor.
+    model(unsigned context_length);
+
     // Create a model from an input text.
-    static model model_from_text(string);
+    static model model_from_text(unsigned context_len, string);
 
     // Translate a symbol code back into its meaning.
     string symbol_meaning(symbol);
-    // Translate a concrete symbol into its code.
+    // Translate a concrete symbol into its code. Adds symbol
+    // to model if not yet encountered.
     symbol symbol_name(string);
 
-    // Given the context code for c1 ... ck, and a new
-    // symbol code c', find context code for c2 ... ck c'. 
-    context advance_context(context, symbol);
+    // Translate a sequence of symbols into its context code.
+    // Adds context to model if not yet encountered.
+    context context_name(const vector<symbol>&);
+
+    // Adds one to the count of a certain context/symbol pair.
+    void increment_model(const vector<symbol>&, symbol);
 
     // Given a context code, return possible following symbols,
-    // together with relevant probabilities.
-    vector<pair<double, symbol>> cand_and_p(context);
+    // together with relevant probabilities. Also include the
+    // contexts that would result.
+    map<symbol, pair<double, context>> cand_and_p(context);
 
     // Given a context code, and a symbol, encode the symbol.
-    int encode(context, symbol);
+    unsigned encode(context, symbol);
+
+    // Given a string of symbols, encode the symbols.
+    vector<unsigned> encode_sequence(vector<symbol>);
 };
 
 #endif
