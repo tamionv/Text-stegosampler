@@ -1,4 +1,4 @@
-#include "model.h"
+#include "model.hxx"
 
 vector<symbol> model::tokenise(string s){
     // Return value.

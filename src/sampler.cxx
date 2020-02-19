@@ -1,4 +1,4 @@
-#include "sampler.h"
+#include "sampler.hxx"
 
 #define MK_KEY(x, y) ((unsigned long long)(x) | ((unsigned long long)(y) << 32))
 #define GET_MSK(k) ((k) & 0xffffffffll)

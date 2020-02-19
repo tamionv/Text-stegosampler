@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <string>
 using namespace std;
 
 // Each symbol will be represented by an integer code.

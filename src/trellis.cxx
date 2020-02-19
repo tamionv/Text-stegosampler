@@ -1,4 +1,4 @@
-#include "trellis.h"
+#include "trellis.hxx"
 
 trellis::trellis(int h, int ml, int sl, int seed):
     height(h),
