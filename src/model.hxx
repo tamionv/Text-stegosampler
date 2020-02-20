@@ -24,8 +24,8 @@ class model {
     vector<string> code_to_symbol;
 
     map<vector<symbol>, context> sequence_to_context;
-    vector<map<symbol, pair<double, context>>> following_symbols;
-    vector<double> total_count;
+    vector<map<symbol, pair<float, context>>> following_symbols;
+    vector<float> total_count;
 
     // Tokenises a string, splitting it into words and punctuation,
     // and adding in symbol meanings to model.
@@ -53,13 +53,19 @@ public:
     // Given a context code, return possible following symbols,
     // together with relevant probabilities. Also include the
     // contexts that would result.
-    map<symbol, pair<double, context>> cand_and_p(context);
+    const map<symbol, pair<float, context>>& cand_and_p(context) const;
 
     // Given a context code, and a symbol, encode the symbol.
-    unsigned encode(context, symbol);
+    unsigned encode(context, symbol) const;
 
     // Given a string of symbols, encode the symbols.
     vector<unsigned> encode_sequence(vector<symbol>);
+
+    // Find number of contexts.
+    unsigned context_count() const;
+
+    // Print highly likely contexts.
+    void highly_likely(const unsigned cnt);
 };
 
 #endif

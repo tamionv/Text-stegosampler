@@ -8,6 +8,6 @@
 using namespace std;
 
 // Sample according to c, conditioning that h.recover(c.encode(return value)) is m.
-vector<symbol> conditional_sample(model& c, trellis& h, vector<unsigned> m, unsigned seed);
+vector<symbol> conditional_sample(const model& c, const trellis& h, vector<unsigned> m, unsigned seed);
 
 #endif

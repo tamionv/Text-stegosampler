@@ -1,22 +1,24 @@
 #include <fstream>
 #include <iostream>
+#include <cassert>
+#include <algorithm>
 #include "trellis.hxx"
 #include "model.hxx"
 #include "sampler.hxx"
 using namespace std;
 
-static constexpr int message_len = 10;
-static constexpr int stego_len = 100;
-static constexpr int trellis_height = 7;
+static constexpr int message_len = MESSAGELEN;
+static constexpr int stego_len = STEGOLEN;
+static constexpr int trellis_height = TRELLISH;
 
 int main(){
     int seed = time(nullptr);
-    ifstream model_input("illiad.txt");
+    ifstream model_input(MODELNAME);
     string model_contents{
         istreambuf_iterator<char>(model_input),
         istreambuf_iterator<char>()};
 
-    model m = model::model_from_text(5, model_contents);
+    model m = model::model_from_text(CONTEXTLEN, model_contents);
     trellis t(trellis_height, message_len, stego_len, seed);
     vector<unsigned> message(message_len);
     random_device rd;
@@ -38,6 +40,8 @@ int main(){
     for(auto x : verif)
         cerr << x << ' ';
     cerr << endl;
+
+    assert(equal(begin(message), end(message), begin(verif)));
 
     return 0;
 }

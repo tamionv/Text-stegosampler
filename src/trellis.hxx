@@ -15,39 +15,39 @@ public:
     trellis(int h, int ml, int sl, int seed);
 
     // Get trellis height.
-    int h();
-
+    int h() const;
+ 
     // Get message length.
-    int message_len();
+    int message_len() const;
 
     // Get stegotext length.
-    int stego_len();
+    int stego_len() const;
     
     // For stegotext position i, gets first position
     // affected by i. By convention, fst(-1) = 0,
     // fst(stego_len()) = message_len()
-    int fst(int);
+    int fst(int) const;
 
     // For stegotext position i, gets first position
     // not affected by i. By convention, fst(-1) = 0,
     // fst(stego_len()) = message_len()
-    int lst(int);
+    int lst(int) const;
 
     // dFst(x) = fst(x) - fst(x - 1)
-    int dFst(int);
+    int dFst(int) const;
 
     // dLst(x) = lst(x) - lst(x - 1)
-    int dLst(int);
+    int dLst(int) const;
 
     // len(x) = lst(x) - fst(x)
-    int len(int);
+    int len(int) const;
 
     // Effect of stegosymbol x on message, as a bitmask,
     // from left to right, in big-endian order.
-    int effect(int);
+    int effect(int) const;
 
     // Apply trellis matrix to stegosequence.
-    vector<unsigned> recover(vector<unsigned>);
+    vector<unsigned> recover(vector<unsigned>) const;
 };
 
 #endif
