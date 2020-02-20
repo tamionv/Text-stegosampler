@@ -12,7 +12,7 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 CPPFLAGS += -std=c++11 -O3
 
 sampler : $(OBJDIR) $(OBJS)
-	$(CXX) $(DEPFLAGS) $(CPPFLAGS) $(OBJS) -o $(TARGET)
+	$(CXX) $(CPPFLAGS) $(OBJS) -o $(TARGET)
 
 clean :
 	-rm -rf $(OBJDIR) $(DEPDIR) $(TARGET)

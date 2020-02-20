@@ -1,4 +1,7 @@
 #include "model.hxx"
+#include <iostream>
+#include <fstream>
+using namespace std;
 
 vector<symbol> model::tokenise(string s){
     // Return value.
@@ -17,12 +20,15 @@ vector<symbol> model::tokenise(string s){
 
     for(auto c : s){
         if(isalnum(c))
-            current.push_back(c);
+            current.push_back(tolower(c));
         else
             add_and_empty();
         if(ispunct(c))
             ret.push_back(symbol_name(string(1, c)));
     }
+    ofstream g("token-log.txt");
+    for(auto x : ret)
+        g << symbol_meaning(x) << '\n';
     return ret;
 }
 
@@ -48,17 +54,39 @@ model model::model_from_text(unsigned context_len, string s){
     // This variable will hold the context throughout.
     vector<symbol> ctx(context_len, bottom_symbol);
 
+    // Fills ctx with contents ending before symbol j, assuming that
+    // symbol i is the first symbol in the text.
+    auto fill_context = [&](unsigned i, unsigned j){
+        unsigned amount = min(j - i, context_len);
+        fill(begin(ctx), begin(ctx) + context_len - amount, bottom_symbol);
+        copy(begin(toks) + j - amount, begin(toks) + j, begin(ctx) + context_len - amount);
+    };
+
+    cerr << "Making model" << endl;
+
     for(unsigned i = 0; i < toks.size(); ++i){
-        // First construct the context.
-        // Add _|_ symbols.
-        fill(begin(ctx), begin(ctx) + max(context_len, i) - i, 0);
+        if(i > 0) cerr << "\r";
+        cerr << "At model making step " << i;
 
-        // Add in real symbols.
-        copy(begin(toks) - min(context_len, i), begin(toks) + i, begin(ctx) + max(context_len, i) - i);
-
-        // Increment model
+        fill_context(0, i);
         ret.increment_model(ctx, toks[i]);
     }
+
+    // Now add in special logic for "sentence beginnings". This
+    // makes the start of our modelled covers more diverse.
+    for(unsigned i = 0; i < toks.size(); ++i){
+        cerr << "\rAt model making step " << toks.size() + i;
+
+        if(ret.symbol_meaning(toks[i]) != ".")
+            continue;
+
+        for(unsigned j = i + 1; j < i + context_len + 1 && j < toks.size(); ++j){
+            fill_context(i + 1, j);
+            ret.increment_model(ctx, toks[j]);
+        }
+    }
+    cerr << endl;
+
 
     return ret;
 }
@@ -71,7 +99,8 @@ symbol model::symbol_name(string s){
     auto it = symbol_to_code.find(s);
     if(it == end(symbol_to_code)){
         code_to_symbol.push_back(s);
-        return symbol_to_code[s] = symbol_to_code.size();
+        symbol_to_code.emplace_hint(it, s, symbol_to_code.size());
+        return symbol_to_code.size() - 1;
     }
     return it->second;
 }
@@ -81,7 +110,8 @@ context model::context_name(const vector<symbol>& v){
     if(it == end(sequence_to_context)){
         following_symbols.emplace_back();
         total_count.push_back(0);
-        return sequence_to_context[v] = sequence_to_context.size();
+        sequence_to_context.emplace_hint(it, v, sequence_to_context.size());
+        return sequence_to_context.size() - 1;
     }
     return it->second;
 }
@@ -90,20 +120,17 @@ void model::increment_model(const vector<symbol>& v, symbol s){
     auto c1 = context_name(v);
 
     // Get outgoing edges from map.
-    auto& out = following_symbols[c1];
-
-    auto it = out.find(s);
+    auto it = following_symbols[c1].find(s);
 
     // If this is a new transition.
-    if(it == end(out)){
+    if(it == end(following_symbols[c1])){
         // Construct next context.
         vector<symbol> target(begin(v) + 1, end(v));
         target.push_back(s);
 
         // Add transition
-        out[s] = make_pair(1.0, context_name(target));
+        following_symbols[c1][s] = make_pair(1.0, context_name(target));
     }
-
     // Otherwise just increment model directly.
     else 
         it->second.first += 1.0;

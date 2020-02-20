@@ -1,4 +1,6 @@
 #include "trellis.hxx"
+#include <iostream>
+using namespace std;
 
 trellis::trellis(int h, int ml, int sl, int seed):
     height(h),
@@ -37,7 +39,7 @@ int trellis::fst(int i){
 }
 
 int trellis::lst(int i){
-    return i < 0 ? 0 : i > slen ? mlen : first[i];
+    return i < 0 ? 0 : i > slen ? mlen : last[i];
 }
 
 int trellis::dFst(int i){
@@ -60,9 +62,8 @@ vector<unsigned> trellis::recover(vector<unsigned> s){
     vector<unsigned> m(message_len());
     for(int i = 0; i < stego_len(); ++i){
         if(s[i] == 0) continue;
-        for(int j = fst(i); j < lst(i); ++j){
+        for(int j = fst(i); j < lst(i); ++j)
             m[j] ^= (effect(i) >> (lst(i) - j - 1)) & 1;
-        }
     }
     return m;
 }

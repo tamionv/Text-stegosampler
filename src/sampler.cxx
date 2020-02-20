@@ -1,4 +1,6 @@
 #include "sampler.hxx"
+#include <iostream>
+using namespace std;
 
 #define MK_KEY(x, y) ((unsigned long long)(x) | ((unsigned long long)(y) << 32))
 #define GET_MSK(k) ((k) & 0xffffffffll)
@@ -25,6 +27,8 @@ struct node{
 };
 
 vector<symbol> conditional_sample(model& c, trellis& h, vector<unsigned> m, unsigned seed){
+    cerr << "Doing conditional sample" << endl;
+
     mt19937 mt(seed);
     using ull = unsigned long long;
     // The current layer is indexed by (mask, context) pairs. But holding
@@ -48,6 +52,9 @@ vector<symbol> conditional_sample(model& c, trellis& h, vector<unsigned> m, unsi
 
     // Advance h.stego_len() the current layer.
     for(int i = 0; i < h.stego_len(); ++i){
+        if(i > 0)
+            cerr << '\r';
+        cerr << "At conditional sample step " << i;
         map<ull, node*> prev_layer = move(current_layer);
         for(auto current_node : prev_layer){
             auto msk = current_node.second->msk;
@@ -59,7 +66,13 @@ vector<symbol> conditional_sample(model& c, trellis& h, vector<unsigned> m, unsi
                 auto msk_ = ((msk << h.dLst(i)) ^ (b *  h.effect(i)))% (1 << h.len(i));
                 auto ctx_ = t.second.second;
                 auto p = t.second.first;
-                    
+
+                bool bad = false;
+                for(int j = h.fst(i); !bad && j < h.fst(i + 1); ++j)
+                    bad = ((msk_ >> (h.lst(i) - j - 1))&1) != m[j];
+
+                if(bad) continue;
+
                 auto next_node = get_node(msk_, ctx_);
                 if(!bernoulli_distribution(next_node->d / (next_node->d + d * p))(mt)){
                     next_node->father = current_node.second;
@@ -69,6 +82,7 @@ vector<symbol> conditional_sample(model& c, trellis& h, vector<unsigned> m, unsi
             }
         }
     }
+    cerr << endl;
 
     // Select a final node from the current (i.e. last) layer, using
     // a similar strategy to before.
