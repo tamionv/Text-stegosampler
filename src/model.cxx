@@ -139,21 +139,22 @@ void model::increment_model(const vector<symbol>& v, symbol s){
     total_count[c1] += 1.0;
 }
 
-map<symbol, pair<double, context>> model::cand_and_p(context c){
+const map<symbol, pair<float, context>>& model::cand_and_p(context c) const{
     return following_symbols[c];
 }
 
-unsigned model::encode(context c, symbol s){
-    return __builtin_popcount(c + s) % 2;
+unsigned model::encode(symbol s) const{
+    return __builtin_popcount(s) % 2;
 }
 
 vector<unsigned> model::encode_sequence(vector<symbol> v){
-    context c = bottom_context;
     vector<unsigned> ret;
 
-    for(auto x : v){
-        ret.push_back(encode(c, x));
-        c = following_symbols[c][x].second;
-    }
+    for(auto x : v)
+        ret.push_back(encode(x));
     return ret;
+}
+
+unsigned model::context_count() const{
+    return sequence_to_context.size();
 }

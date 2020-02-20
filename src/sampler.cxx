@@ -1,81 +1,93 @@
 #include "sampler.hxx"
 #include <iostream>
+#include <cassert>
 using namespace std;
-
-#define MK_KEY(x, y) ((unsigned long long)(x) | ((unsigned long long)(y) << 32))
-#define GET_MSK(k) ((k) & 0xffffffffll)
-#define GET_CTX(k) ((k) >> 32)
 
 // Node in trellis tree. Rather than explicitly maintain all back edges
 // in the graph, I will choose a back edge randomly as I go along, thus
 // needing constant space per node. Interestingly this reduces the
 // trellis graph to a tree.
 struct node{
-    mask msk;
-    context ctx;
-    double d;
+    node *father = nullptr;
+    float d = 0;
+    symbol father_sym = bottom_symbol;
+    int position;
 
-    node *father;
-    symbol father_sym;
-
-    node(mask m, context c):
-        msk(m),
-        ctx(c),
-        d(0),
-        father(nullptr),
-        father_sym(bottom_symbol){}
+    node(int pos):
+        position(pos){}
 };
 
-vector<symbol> conditional_sample(model& c, trellis& h, vector<unsigned> m, unsigned seed){
+vector<symbol> conditional_sample(const model& c, const trellis& h, vector<unsigned> m, unsigned seed){
     cerr << "Doing conditional sample" << endl;
+    minstd_rand mt(seed);
 
-    mt19937 mt(seed);
-    using ull = unsigned long long;
+    const unsigned hh = h.h(), hmask = (1 << hh) - 1;
+
+    // Firstly, this is useful for checking if a state is good:
+    vector<unsigned> good_check_vec(h.stego_len());
+    for(int i = 0; i < h.stego_len(); ++i)
+        for(int j = h.fst(i); j < h.fst(i + 1); ++j)
+            good_check_vec[i] = 2 * good_check_vec[i] + m[j];
+
+    // The root of the trellis graph.
+    node *root = new node { 0 };
+
     // The current layer is indexed by (mask, context) pairs. But holding
     // these as pairs in the inner loop is innefficient. Thus I will index
-    // (mask, context) as mask | context << 32 i.e. MK_KEY(mask, context).
-    // Note that mask = GET_MSK(MK_KEY(mask, context)), and that 
-    // context = GET_CTX(MK_KEY(mask, context))
-    map<ull, node*> current_layer;
+    // (mask, context) as mask | context << hh
+    //
+    // The root ought properly to be only at key 0, but due to the fact that
+    // these entries are accessed only if mentioned in visit_now or visit_next,
+    // and entries at wrong positions in the text are counted as being invalid,
+    // I can use root as a dummy value, to remove a nullptr check later.
+    vector<node*> current_layer{c.context_count() << h.h(), root },
+        prev_layer{c.context_count() << h.h(), root };
 
-    // Conditionally get a node in the next layer, creating it if it doesn't exist.
-    auto get_node = [&](unsigned msk, context ctx){
-        auto k = MK_KEY(msk, ctx);
-        auto it = current_layer.find(k);
-        if(it == end(current_layer))
-            return current_layer[k] = new node { msk, ctx };
-        return it->second;
-    };
+    // Nodes that we visit on next layer.
+    vector<unsigned> visit_now, visit_next;
 
-    // Add trellis root.
-    current_layer[MK_KEY(0, bottom_context)] = new node { 0, bottom_context };
+    // We visit the trellis root, which is properly at key 0.
+    visit_next.push_back(0);
 
     // Advance h.stego_len() the current layer.
     for(int i = 0; i < h.stego_len(); ++i){
+        const auto mask_lim = (1 << h.len(i)) - 1;
+        const auto my_dLst = h.dLst(i);
+        const auto my_effect = h.effect(i);
+
         if(i > 0)
             cerr << '\r';
         cerr << "At conditional sample step " << i;
-        map<ull, node*> prev_layer = move(current_layer);
-        for(auto current_node : prev_layer){
-            auto msk = current_node.second->msk;
-            auto ctx = current_node.second->ctx;
-            auto d = current_node.second->d;
 
-            for(auto t : c.cand_and_p(ctx)){
-                auto b = c.encode(ctx, t.first);
-                auto msk_ = ((msk << h.dLst(i)) ^ (b *  h.effect(i)))% (1 << h.len(i));
-                auto ctx_ = t.second.second;
-                auto p = t.second.first;
+        swap(current_layer, prev_layer);
+        swap(visit_now, visit_next);
+        visit_next.clear();
 
-                bool bad = false;
-                for(int j = h.fst(i); !bad && j < h.fst(i + 1); ++j)
-                    bad = ((msk_ >> (h.lst(i) - j - 1))&1) != m[j];
+        for(auto current_idx : visit_now){
+            const auto current_node = prev_layer[current_idx];
+            const auto msk = current_idx & hmask;
+            const auto ctx = current_idx >> hh;
+            const auto d = current_node->d;
 
-                if(bad) continue;
+            for(const auto& t : c.cand_and_p(ctx)){
+                const auto b = c.encode(t.first);
+                const auto msk_ = ((msk << my_dLst) ^ (b * my_effect)) & mask_lim;
 
-                auto next_node = get_node(msk_, ctx_);
+                if(good_check_vec[i] ^ (msk_ >> (h.lst(i) - h.fst(i + 1)))) continue;
+
+                const auto ctx_ = t.second.second;
+                const auto p = t.second.first;
+                const auto k = msk_ | ctx_ << hh;
+
+                // No nullptr check since current_layer never contains a null pointer.
+                if(current_layer[k]->position != i + 1){
+                    current_layer[k] = new node { i + 1 };
+                    visit_next.push_back(k);
+                }
+                const auto next_node = current_layer[k];
+
                 if(!bernoulli_distribution(next_node->d / (next_node->d + d * p))(mt)){
-                    next_node->father = current_node.second;
+                    next_node->father = current_node;
                     next_node->father_sym = t.first;
                 }
                 next_node->d += d * p;
@@ -86,13 +98,14 @@ vector<symbol> conditional_sample(model& c, trellis& h, vector<unsigned> m, unsi
 
     // Select a final node from the current (i.e. last) layer, using
     // a similar strategy to before.
-    double d = 0;
+    float d = 0;
     node* me = nullptr;
 
-    for(auto x : current_layer){
-        if(!bernoulli_distribution(d / x.second->d)(mt))
-            me = x.second;
-        d += x.second->d;
+    for(auto x : visit_next){
+        auto other = current_layer[x];
+        if(!bernoulli_distribution(d / other->d)(mt))
+            me = other;
+        d += other->d;
     }
     
     // Now backwalk through the graph to reconstitute the result.
