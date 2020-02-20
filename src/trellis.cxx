@@ -13,7 +13,7 @@ trellis::trellis(int h, int ml, int sl, int seed):
     mt19937 mt(seed);
 
     // Width of a trellis block.
-    int width = (sl - h) / ml;
+    int width = (sl - h + ml - 1) / ml;
 
     for(int i = 0; i < slen; ++i){
         first[i] = i / width;
@@ -22,43 +22,43 @@ trellis::trellis(int h, int ml, int sl, int seed):
     }
 };
 
-int trellis::h(){
+int trellis::h() const{
     return height;
 }
 
-int trellis::message_len(){
+int trellis::message_len() const{
     return mlen;
 }
 
-int trellis::stego_len(){
+int trellis::stego_len() const{
     return slen;
 }
 
-int trellis::fst(int i){
-    return i < 0 ? 0 : i > slen ? mlen : first[i];
+int trellis::fst(int i) const{
+    return i < 0 ? 0 : i >= slen ? mlen : first[i];
 }
 
-int trellis::lst(int i){
-    return i < 0 ? 0 : i > slen ? mlen : last[i];
+int trellis::lst(int i) const{
+    return i < 0 ? 0 : i >= slen ? mlen : last[i];
 }
 
-int trellis::dFst(int i){
+int trellis::dFst(int i) const{
     return fst(i) - fst(i - 1);
 }
 
-int trellis::dLst(int i){
+int trellis::dLst(int i) const{
     return lst(i) - lst(i - 1);
 }
 
-int trellis::effect(int x){
+int trellis::effect(int x) const{
     return col[x];
 }
 
-int trellis::len(int x){
+int trellis::len(int x) const{
     return lst(x) - fst(x);
 }
 
-vector<unsigned> trellis::recover(vector<unsigned> s){
+vector<unsigned> trellis::recover(vector<unsigned> s) const{
     vector<unsigned> m(message_len());
     for(int i = 0; i < stego_len(); ++i){
         if(s[i] == 0) continue;

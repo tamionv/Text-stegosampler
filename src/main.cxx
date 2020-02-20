@@ -5,8 +5,8 @@
 #include "sampler.hxx"
 using namespace std;
 
-static constexpr int message_len = 10;
-static constexpr int stego_len = 100;
+static constexpr int message_len = 200;
+static constexpr int stego_len = 1000;
 static constexpr int trellis_height = 7;
 
 int main(){
