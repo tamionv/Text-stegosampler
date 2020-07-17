@@ -63,6 +63,9 @@ public:
 
     // Find number of contexts.
     unsigned context_count() const;
+
+    // Print highly likely contexts.
+    void highly_likely(const unsigned cnt);
 };
 
 #endif
