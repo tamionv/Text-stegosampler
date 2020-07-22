@@ -148,13 +148,10 @@ unsigned model::encode(context c, symbol s) const{
 }
 
 vector<unsigned> model::encode_sequence(vector<symbol> v){
-    context c = bottom_context;
     vector<unsigned> ret;
 
-    for(auto x : v){
-        ret.push_back(encode(c, x));
-        c = following_symbols[c][x].second;
-    }
+    for(auto x : v)
+        ret.push_back(encode(x));
     return ret;
 }
 
