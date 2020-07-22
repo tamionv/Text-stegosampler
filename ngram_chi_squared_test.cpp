@@ -50,8 +50,8 @@ int main(){
 
     map<vector<string>, int> theoretical, experimental;
 
-    auto add_to_map = [&](int idx, map<vector<string>, int>& mp){
-        for(int i = 0; i + clen <= ss[idx].size(); ++i){
+    auto add_to_map = [&](int idx, map<vector<string>, int>& mp, int start = 0){
+        for(int i = start; i + clen <= ss[idx].size(); ++i){
             vector<string> arr(clen);
 
             copy(begin(ss[idx]) + i, begin(ss[idx]) + i + clen, begin(arr));
@@ -63,7 +63,7 @@ int main(){
     cout << endl;
     add_to_map(0, theoretical);
     for(int i = 1; i < ss.size(); ++i)
-        add_to_map(i, experimental);
+        add_to_map(i, experimental, 250);
 
     int minimum_frequency = 0;
     int total_count = 0;
@@ -88,12 +88,14 @@ int main(){
 
     for(auto x : theoretical){
         if(x.second < minimum_frequency) continue;
-        g << x.first[0] <<' ' << theory_scale * x.second << ' ' << experimental[x.first] << endl;
+        for(auto y : x.first)
+            g << y << ", ";
+        g << theory_scale * x.second << ", " << experimental[x.first] << endl;
         double tmp = theory_scale * x.second - experimental[x.first];
         chi_sq += tmp * tmp / (theory_scale * x.second);
         ++total_count;
     }
 
     cout << "CHI_SQ: " << chi_sq << endl;
-    cout << "NUMBER OF OBSERVATIONS: " << total_count << endl;
+    cout << "NUMBER OF DF: " << total_count - 1 << endl;
 }

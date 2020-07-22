@@ -1,6 +1,7 @@
+#!/bin/bash
+
 mkdir stegotexts
 
-for i in `seq 1 1000`; do
+(for i in `seq 72 81`; do
     echo $i
-    ./sampler > stegotexts/$i
-done
+done) | xargs -n 1 -P 5 ./one_stegotext_build.sh
