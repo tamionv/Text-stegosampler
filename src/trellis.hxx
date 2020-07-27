@@ -14,6 +14,9 @@ public:
     // Generate trellis of a given height and sizes, from a seed.
     trellis(int h, int ml, int sl, int seed);
 
+    // Get trellis from filename
+    trellis(string);
+
     // Get trellis height.
     int h() const;
  

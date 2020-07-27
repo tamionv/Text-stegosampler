@@ -2,14 +2,6 @@ ifndef MESSAGELEN
     $(error MESSAGELEN is not set)
 endif
 
-ifndef MODELNAME
-    $(error MODELNAME is not set)
-endif
-
-ifndef CONTEXTLEN
-    $(error CONTEXTLEN is not set)
-endif
-
 ifndef STEGOLEN
     $(error STEGOLEN is not set)
 endif
@@ -29,7 +21,7 @@ OBJS := $(patsubst $(SRCDIR)/%.cxx,$(OBJDIR)/%.o,$(SRCS))
 DEPS := $(patsubst $(SRCDIR)/%.cxx,$(DEPDIR)/%.d,$(SRCS))
 
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-CPPFLAGS += -std=c++11 -O3 -g -D MODELNAME=$(MODELNAME) -D TRELLISH=$(TRELLISH) -D MESSAGELEN=$(MESSAGELEN) -D STEGOLEN=$(STEGOLEN) -D CONTEXTLEN=$(CONTEXTLEN)
+CPPFLAGS += -pthread -std=c++11 -O3 -D MODELNAME=$(MODELNAME) -D TRELLISH=$(TRELLISH) -D MESSAGELEN=$(MESSAGELEN) -D STEGOLEN=$(STEGOLEN)
 
 sampler : $(OBJDIR) $(OBJS)
 	$(CXX) $(CPPFLAGS) $(OBJS) -o $(TARGET)
