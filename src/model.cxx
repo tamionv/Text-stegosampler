@@ -21,8 +21,9 @@ model model::model_from_file(string s) {
 const map<symbol, pair<double, context>> model::cand_and_p(context c) const {
     map<symbol, pair<double, context>> ret;
     for (int i = 0; i < cnt; ++i)
-        if (buf[c][i])
+        if (buf[c][i]) {
             ret[i] = make_pair(buf[c][i], i);
+        }
 
     return ret;
 }

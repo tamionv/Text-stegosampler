@@ -10,7 +10,6 @@ using namespace std;
 
 static constexpr int message_len = 4;
 static constexpr int stego_len = 20;
-static constexpr int trellis_height = 4;
 
 using message = vector<unsigned>;
 using stego = vector<unsigned>;
@@ -80,9 +79,6 @@ int main() {
 
         for (int i = 0; i < nr_tests; ++i) {
             auto stego = conditional_sample(m, t, message, mt);
-            if (msg == 3) {
-                cerr << uniform_int_distribution<int>(1, 100)(mt) << endl;
-            }
 
             experimental_dist[message][stego] += 1.0 / nr_tests;
             if (msg == 5 && i % 1000 == 0)

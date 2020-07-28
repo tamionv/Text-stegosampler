@@ -1,7 +1,7 @@
 #include "sampler.hxx"
+#include <algorithm>
 #include <cassert>
 #include <iostream>
-#include <list>
 using namespace std;
 
 // Node in trellis tree. Rather than explicitly maintain all back edges
@@ -11,8 +11,8 @@ using namespace std;
 struct node {
     node *father = nullptr;
     double d = 0;
-    symbol father_sym = bottom_symbol;
-    int position;
+    symbol father_sym = 0;
+    int position = 0;
 
     node(int pos) : position(pos) {}
 };
@@ -20,9 +20,9 @@ struct node {
 vector<symbol> conditional_sample(const model &c, const trellis &h,
                                   vector<unsigned> m, mt19937 &mt) {
     // cerr << "Doing conditional sample" << endl;
-    list<node> elems;
-
     const unsigned hh = h.h(), hmask = (1 << hh) - 1;
+
+    vector<node *> elems;
 
     // Firstly, this is useful for checking if a state is good:
     vector<unsigned> good_check_vec(h.stego_len());
@@ -31,8 +31,10 @@ vector<symbol> conditional_sample(const model &c, const trellis &h,
             good_check_vec[i] = 2 * good_check_vec[i] + m[j];
 
     // The root of the trellis graph.
-    elems.push_front(node{0});
-    node *root = &elems.front();
+    node *root = new node{0};
+    elems.push_back(root);
+
+    root->d = 1;
 
     // The current layer is indexed by (mask, context) pairs. But holding
     // these as pairs in the inner loop is innefficient. Thus I will index
@@ -71,13 +73,15 @@ vector<symbol> conditional_sample(const model &c, const trellis &h,
             const auto ctx = current_idx >> hh;
             const auto d = current_node->d;
 
+            assert(c.cand_and_p(ctx).size() == 2);
             for (const auto &t : c.cand_and_p(ctx)) {
                 const auto b = c.encode(ctx, t.first);
                 const auto msk_ =
                     ((msk << my_dLst) ^ (b * my_effect)) & mask_lim;
 
-                if (good_check_vec[i] ^ (msk_ >> (h.lst(i) - h.fst(i + 1))))
+                if (good_check_vec[i] ^ (msk_ >> (h.lst(i) - h.fst(i + 1)))) {
                     continue;
+                }
 
                 const auto ctx_ = t.second.second;
                 const auto p = t.second.first;
@@ -86,14 +90,11 @@ vector<symbol> conditional_sample(const model &c, const trellis &h,
                 // No nullptr check since current_layer never contains a null
                 // pointer.
                 if (current_layer[k]->position != i + 1) {
-                    elems.push_front(node{i + 1});
-                    current_layer[k] = &elems.front();
+                    current_layer[k] = new node{i + 1};
+                    elems.push_back(current_layer[k]);
                     visit_next.push_back(k);
                 }
                 const auto next_node = current_layer[k];
-
-                if(next_node->d > 1e-6)
-                    cerr << "HA" << endl;
 
                 if (!bernoulli_distribution(next_node->d /
                                             (next_node->d + d * p))(mt)) {
@@ -125,6 +126,9 @@ vector<symbol> conditional_sample(const model &c, const trellis &h,
         ret.rbegin()[i] = me->father_sym;
         me = me->father;
     }
+
+    for (auto x : elems)
+        delete x;
 
     return ret;
 }
