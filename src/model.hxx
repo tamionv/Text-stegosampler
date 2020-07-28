@@ -32,7 +32,7 @@ class model {
     // Given a context code, return possible following symbols,
     // together with relevant probabilities. Also include the
     // contexts that would result.
-    const map<symbol, pair<float, context>> cand_and_p(context) const;
+    const map<symbol, pair<double, context>> cand_and_p(context) const;
 
     // Given a context code, and a symbol, encode the symbol.
     unsigned encode(context, symbol) const;

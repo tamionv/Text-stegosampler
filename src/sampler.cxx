@@ -10,7 +10,7 @@ using namespace std;
 // trellis graph to a tree.
 struct node {
     node *father = nullptr;
-    float d = 0;
+    double d = 0;
     symbol father_sym = bottom_symbol;
     int position;
 
@@ -18,9 +18,8 @@ struct node {
 };
 
 vector<symbol> conditional_sample(const model &c, const trellis &h,
-                                  vector<unsigned> m, unsigned seed) {
+                                  vector<unsigned> m, mt19937 &mt) {
     // cerr << "Doing conditional sample" << endl;
-    minstd_rand mt(seed);
     list<node> elems;
 
     const unsigned hh = h.h(), hmask = (1 << hh) - 1;
@@ -93,6 +92,9 @@ vector<symbol> conditional_sample(const model &c, const trellis &h,
                 }
                 const auto next_node = current_layer[k];
 
+                if(next_node->d > 1e-6)
+                    cerr << "HA" << endl;
+
                 if (!bernoulli_distribution(next_node->d /
                                             (next_node->d + d * p))(mt)) {
                     next_node->father = current_node;
@@ -106,7 +108,7 @@ vector<symbol> conditional_sample(const model &c, const trellis &h,
 
     // Select a final node from the current (i.e. last) layer, using
     // a similar strategy to before.
-    float d = 0;
+    double d = 0;
     node *me = nullptr;
 
     for (auto x : visit_next) {
