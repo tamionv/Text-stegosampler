@@ -114,7 +114,7 @@ vector<symbol> conditional_sample(const model &c, const trellis &h,
 
     for (auto x : visit_next) {
         auto other = current_layer[x];
-        if (!bernoulli_distribution(d / other->d)(mt))
+        if (!bernoulli_distribution(d / (d + other->d))(mt))
             me = other;
         d += other->d;
     }

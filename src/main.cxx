@@ -22,7 +22,15 @@ template <typename T>
 double total_var(vector<unsigned> v, map<T, double> m1, map<T, double> m2) {
     double ret = 0;
     for (auto x : m1) {
-        ret = max(ret, abs(x.second - m2[x.first]));
+        if (ret < abs(x.second - m2[x.first])) {
+            ret = max(ret, abs(x.second - m2[x.first]));
+            if (all_of(begin(v), end(v), [&](int x) { return x == 0; })) {
+                for (auto y : x.first)
+                    cerr << y << ' ';
+                cerr << endl;
+                cerr << x.second << ' ' << m2[x.first] << endl;
+            }
+        }
     }
     return ret;
 }
@@ -69,7 +77,10 @@ int main() {
             sum += y.second;
         for (auto &y : x.second)
             y.second /= sum;
+
+        cerr << x.second.size() - 1 << endl;
     }
+
     auto one_thread_work = [m, t](int msg) {
         mt19937 mt(143232 + msg);
 
@@ -98,8 +109,10 @@ int main() {
         // for (auto y : x.first)
         // cout << y << ' ';
         // cout << ",";
-        cout << total_var(x.first, x.second, experimental_dist[x.first]) << ' '
-             << chi_sq(x.first, x.second, experimental_dist[x.first]) << endl;
+        double chisq = chi_sq(x.first, x.second, experimental_dist[x.first]);
+        cout << total_var(x.first, x.second, experimental_dist[x.first]) << " & "
+             << chisq << " & "
+             << erfc((65535 - chisq) / (2.0 * sqrt(65535))) / 2.0 << endl;
     }
 
     return 0;
