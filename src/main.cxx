@@ -16,7 +16,7 @@ static constexpr int stego_len = 20;
 using message = vector<unsigned>;
 using stego = vector<unsigned>;
 
-static constexpr int nr_tests = 1e6;
+static constexpr int nr_tests = 10;
 
 template <typename T> double total_var(map<T, double> m1, map<T, double> m2) {
     double ret = 0;
@@ -54,7 +54,6 @@ int main() {
     mutex mtx;
 
     model m = model::model_from_file("model");
-    static constexpr int nr_experiments = 0;
     auto computation = [&](int message_len) {
         map<unsigned, double> uncond, full_cond;
 
@@ -66,13 +65,13 @@ int main() {
             uncond[ss] = m.probability(stego);
         }
 
-        for (int i = 1; i <= nr_experiments; ++i) {
+        for (int i = 1; i <= nr_tests; ++i) {
+            cerr << i << ' ' << nr_tests << endl;
             trellis t(2, message_len, stego_len, 15342 + i);
 
             map<message, map<unsigned, double>> cond;
             for (int ss = 0; (ss >> stego_len) == 0; ++ss) {
-                if (message_len == 10 && ss % 1000 == 0)
-                    cerr << ss << endl;
+
                 vector<unsigned> stego;
                 for (int i = 0; i < stego_len; ++i)
                     stego.push_back(((ss >> i) & 1) + 1);
@@ -90,16 +89,17 @@ int main() {
 
             for (auto &x : cond)
                 for (auto &y : x.second) {
-                    full_cond[y.first] +=
-                        y.second / ((1 << message_len) * 1.0 * nr_experiments);
+                    full_cond[y.first] += y.second / (1 << message_len);
                 }
         }
+        for (auto &x : full_cond)
+            x.second /= nr_tests;
 
         double chisq = chi_sq(full_cond, uncond);
         mtx.lock();
         cout << message_len << " & " << total_var(full_cond, uncond) << " & "
              << kl_div(full_cond, uncond) << " & " << kl_div(uncond, full_cond)
-             << " & " << chisq << " & " << (1 << stego_len) - 1 << endl;
+             << " & " << chisq << " & " << (1 << stego_len) - 1 << " \\\\" << endl;
         mtx.unlock();
     };
     vector<thread> ths;
