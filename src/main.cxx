@@ -16,7 +16,7 @@ using stego = vector<unsigned>;
 
 map<message, map<stego, double>> theoretical_dist, experimental_dist;
 
-static constexpr int nr_tests = 1e8;
+static constexpr int nr_tests = 1e5;
 
 template <typename T>
 double total_var(vector<unsigned> v, map<T, double> m1, map<T, double> m2) {
@@ -68,7 +68,6 @@ int main() {
 
         theoretical_dist[t.recover(m.encode_sequence(stego))][stego] +=
             m.probability(stego);
-        experimental_dist[t.recover(m.encode_sequence(stego))][stego] = 0.0;
     }
 
     for (auto &x : theoretical_dist) {
@@ -105,11 +104,15 @@ int main() {
         x.join();
 
     for (auto &x : theoretical_dist) {
+        cout << theoretical_dist[x.first].size() << ' '
+             << experimental_dist[x.first].size() << endl;
         // for (auto y : x.first)
         // cout << y << ' ';
         // cout << ",";
         double chisq = chi_sq(x.first, x.second, experimental_dist[x.first]);
         cout << total_var(x.first, x.second, experimental_dist[x.first])
+             << " & " << kl_div(x.first, x.second, experimental_dist[x.first])
+             << " & " << kl_div(x.first, experimental_dist[x.first], x.second)
              << " & " << chisq << " & "
              << erfc((65535 - chisq) / (2.0 * sqrt(65535))) / 2.0 << endl;
     }
