@@ -54,34 +54,46 @@ int main() {
     mutex mtx;
 
     model m = model::model_from_file("model");
+    static constexpr int nr_experiments = 0;
     auto computation = [&](int message_len) {
         map<unsigned, double> uncond, full_cond;
-        map<message, map<unsigned, double>> cond;
-        trellis t(2, message_len, stego_len, 15342);
 
         for (int ss = 0; (ss >> stego_len) == 0; ++ss) {
             vector<unsigned> stego;
             for (int i = 0; i < stego_len; ++i)
                 stego.push_back(((ss >> i) & 1) + 1);
 
-            auto tmp = t.recover(m.encode_sequence(stego));
-
             uncond[ss] = m.probability(stego);
-            cond[t.recover(m.encode_sequence(stego))][ss] =
-                m.probability(stego);
         }
 
-        for (auto &x : cond) {
-            double sum = 0;
-            for (auto &y : x.second)
-                sum += y.second;
-            for (auto &y : x.second)
-                y.second /= sum;
-        }
+        for (int i = 1; i <= nr_experiments; ++i) {
+            trellis t(2, message_len, stego_len, 15342 + i);
 
-        for (auto &x : cond)
-            for (auto &y : x.second)
-                full_cond[y.first] += y.second / (1 << message_len);
+            map<message, map<unsigned, double>> cond;
+            for (int ss = 0; (ss >> stego_len) == 0; ++ss) {
+                if (message_len == 10 && ss % 1000 == 0)
+                    cerr << ss << endl;
+                vector<unsigned> stego;
+                for (int i = 0; i < stego_len; ++i)
+                    stego.push_back(((ss >> i) & 1) + 1);
+                auto tmp = t.recover(m.encode_sequence(stego));
+                cond[t.recover(m.encode_sequence(stego))][ss] =
+                    m.probability(stego);
+            }
+            for (auto &x : cond) {
+                double sum = 0;
+                for (auto &y : x.second)
+                    sum += y.second;
+                for (auto &y : x.second)
+                    y.second /= sum;
+            }
+
+            for (auto &x : cond)
+                for (auto &y : x.second) {
+                    full_cond[y.first] +=
+                        y.second / ((1 << message_len) * 1.0 * nr_experiments);
+                }
+        }
 
         double chisq = chi_sq(full_cond, uncond);
         mtx.lock();
