@@ -2,26 +2,49 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <mutex>
+#include <set>
 using namespace std;
 
 trellis::trellis(int h, int ml, int sl, int seed)
     : height(h), mlen(ml), slen(sl), first(sl), last(sl), col(sl) {
     mt19937 mt(seed);
+    static mutex mtx;
 
     // Width of a trellis block.
-    int width = (sl - h + ml - 1) / ml;
+    int width = sl / ml;
 
-    cerr << h << ' ' << ml << ' ' << sl << endl;
+    do {
+        for (int i = 0; i < slen; ++i) {
+            first[i] = min(ml - 1, i / width);
+            last[i] = min(ml, first[i] + height);
+            col[i] =
+                uniform_int_distribution<int>(1, (1 << (last[i] - first[i])) - 1)(mt);
+            mtx.lock();
+            cerr << first[i] << ' ' << last[i] << ' ' << col[i] << endl;
+            mtx.unlock();
+            // col[i] = (1 << (last[i] - first[i])) - 1;
+        }
+    } while (!is_good());
 
-    for (int i = 0; i < slen; ++i) {
-        first[i] = i / width;
-        last[i] = min(ml, first[i] + height);
-        col[i] =
-            uniform_int_distribution<int>(0, 1 << (last[i] - first[i]))(mt);
-        cerr << first[i] << ' ' << last[i] << ' ' << col[i] << endl;
-        // col[i] = (1 << (last[i] - first[i])) - 1;
-    }
+    cerr << "TRELLIS IS GOOD" << endl;
 };
+
+bool trellis::is_good() {
+    set<vector<unsigned>> possible_ms;
+
+    for (unsigned ss = 0; (ss >> slen) == 0; ++ss) {
+        vector<unsigned> stego(slen);
+        for (int i = 0; i < slen; ++i)
+            stego[i] = (ss >> i) & 1;
+
+        possible_ms.insert(recover(stego));
+
+        if (possible_ms.size() >> mlen)
+            return true;
+    }
+    return false;
+}
 
 trellis::trellis(string s) {
     ifstream f(s);

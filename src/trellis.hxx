@@ -10,6 +10,8 @@ using mask = unsigned;
 class trellis{
     int height, mlen, slen;
     vector<int> first, last, col;
+
+    bool is_good();
 public:
     // Generate trellis of a given height and sizes, from a seed.
     trellis(int h, int ml, int sl, int seed);
