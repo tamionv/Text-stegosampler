@@ -16,7 +16,7 @@ using stego = vector<unsigned>;
 
 map<message, map<stego, double>> theoretical_dist, experimental_dist;
 
-static constexpr int nr_tests = 1e8;
+static constexpr int nr_tests = 1e6;
 
 template <typename T>
 double total_var(vector<unsigned> v, map<T, double> m1, map<T, double> m2) {
@@ -110,6 +110,8 @@ int main() {
         // cout << ",";
         double chisq = chi_sq(x.first, x.second, experimental_dist[x.first]);
         cout << total_var(x.first, x.second, experimental_dist[x.first])
+             << " & " << kl_div(x.first, x.second, experimental_dist[x.first])
+             << " & " << kl_div(x.first, experimental_dist[x.first], x.second)
              << " & " << chisq << " & "
              << erfc((65535 - chisq) / (2.0 * sqrt(65535))) / 2.0 << endl;
     }
