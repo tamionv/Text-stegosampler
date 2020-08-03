@@ -54,12 +54,14 @@ int main() {
     mutex mtx;
 
     model m = model::model_from_file("model");
-    auto computation = [&](int message_len) {
+    auto computation = [&](int offset, int message_len) {
         map<unsigned, double> uncond, full_cond;
         map<message, map<unsigned, double>> cond;
-        trellis t(2, message_len, stego_len, 15342);
+        trellis t(2, message_len, stego_len, 15342 + offset);
 
         for (int ss = 0; (ss >> stego_len) == 0; ++ss) {
+            if (ss % 100000 == 0)
+                cerr << ss << endl;
             vector<unsigned> stego;
             for (int i = 0; i < stego_len; ++i)
                 stego.push_back(((ss >> i) & 1) + 1);
@@ -70,7 +72,6 @@ int main() {
             cond[t.recover(m.encode_sequence(stego))][ss] =
                 m.probability(stego);
         }
-
         for (auto &x : cond) {
             double sum = 0;
             for (auto &y : x.second)
@@ -78,22 +79,22 @@ int main() {
             for (auto &y : x.second)
                 y.second /= sum;
         }
-
         for (auto &x : cond)
             for (auto &y : x.second)
                 full_cond[y.first] += y.second / (1 << message_len);
 
-        double chisq = chi_sq(full_cond, uncond);
+        double chisq;
         mtx.lock();
         cout << message_len << " & " << total_var(full_cond, uncond) << " & "
              << kl_div(full_cond, uncond) << " & " << kl_div(uncond, full_cond)
              << " & " << chisq << " & " << (1 << stego_len) - 1 << endl;
         mtx.unlock();
     };
-    vector<thread> ths;
-    for (int i = 1; i <= 13; ++i)
-        ths.emplace_back(computation, i);
-
-    for (auto &x : ths)
-        x.join();
+    for (int j = 0; j < 1000; ++j) {
+        vector<thread> ths;
+        for (int i = 1; i <= 13; ++i)
+            ths.emplace_back(computation, j, i);
+        for (auto &x : ths)
+            x.join();
+    }
 }

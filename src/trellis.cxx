@@ -21,13 +21,11 @@ trellis::trellis(int h, int ml, int sl, int seed)
             col[i] =
                 uniform_int_distribution<int>(1, (1 << (last[i] - first[i])) - 1)(mt);
             mtx.lock();
-            cerr << first[i] << ' ' << last[i] << ' ' << col[i] << endl;
             mtx.unlock();
             // col[i] = (1 << (last[i] - first[i])) - 1;
         }
     } while (!is_good());
 
-    cerr << "TRELLIS IS GOOD" << endl;
 };
 
 bool trellis::is_good() {
